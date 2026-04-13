@@ -108,12 +108,12 @@ switch ($action) {
         
         if (!$ex->fetch()) {
             getDB()->prepare('INSERT INTO usuarios (nome,email,tipo,plan,senha,criado_por_admin,criado_em) VALUES(?,?,?,?,?,0,NOW())')
-                   ->execute([$nome, $email, 'professora', 'premium', DEFAULT_PASSWORD]);
+                   ->execute([$nome, $email, 'professora', 'free', DEFAULT_PASSWORD]);
             resp(['ok'=>true, 'msg'=>"Sucesso! Nova conta criada para: $email"]);
         } else {
-            // Opcional: Se a pessoa já teve conta antes, liberamos o Premium novamente
-            getDB()->prepare('UPDATE usuarios SET plan=?, bloqueado=0 WHERE email=?')->execute(['premium', $email]);
-            resp(['ok'=>true, 'msg'=>"Sucesso! Conta ja existia. Plano atualizado para premium: $email"]);
+            // Se a pessoa já teve conta antes, liberamos o plano free
+            getDB()->prepare('UPDATE usuarios SET plan=?, bloqueado=0 WHERE email=?')->execute(['free', $email]);
+            resp(['ok'=>true, 'msg'=>"Sucesso! Conta ja existia. Plano atualizado para free: $email"]);
         }
 
     case 'login':

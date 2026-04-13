@@ -3882,7 +3882,21 @@ function updateUserBar() {
 }
 
 function hasPlan(required) {
-  return true; // Liberado tudo temporariamente para testes locais
+  // Se estiver em localhost, libera tudo para testes do desenvolvedor
+  const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+  if (isLocal) return true;
+
+  if (!currentUser) return false;
+  const p = currentUser.plan || 'free';
+  
+  if (required === 'premium') {
+    return p === 'premium';
+  }
+  if (required === 'basico') {
+    // basico significa Pacote Professor. Premium também inclui Professor.
+    return p === 'basico' || p === 'premium';
+  }
+  return true; // Para recursos free ou se não houver requerimento
 }
 
 function updateLocks() {
