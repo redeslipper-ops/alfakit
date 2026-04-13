@@ -1,0 +1,3 @@
+[LOG DE WEBHOOKS ALFAKIT]
+Arquivo inicializado em: 2026-04-13
+Aguardando recebimento de dados...
