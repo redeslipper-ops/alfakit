@@ -1084,17 +1084,6 @@ body {
 .ditado-blank { width: 28px; height: 3px; background: #2d2a26; border-radius: 2px; margin-bottom: 4px; }
 .ditado-syl-hint { font-size: 11px; font-weight: 800; color: #c0b8b0; margin-top: 6px; letter-spacing: 1px; }
 
-/* ══════════════════════════════════════════════
-   GERADOR DE PROVAS (Order Bump 1)
-══════════════════════════════════════════════ */
-.prova-question { margin-bottom: 20px; }
-.prova-q-num { font-size: 12px; font-weight: 800; color: #a09890; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
-.prova-q-text { font-weight: 800; font-size: 15px; margin-bottom: 10px; }
-.prova-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.prova-option { border: 2px solid var(--border); border-radius: 10px; padding: 10px 14px; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: var(--cream); }
-.prova-option:hover { border-color: var(--sage); background: var(--sage-light); }
-.prova-option.correct { border-color: var(--sage); background: var(--sage-light); color: var(--sage); }
-.prova-option.wrong { border-color: var(--rose); background: var(--rose-light); color: var(--rose); }
 
 /* ══════════════════════════════════════════════
    EDITOR DE LAYOUT (Order Bump 2)
@@ -1446,7 +1435,6 @@ body {
         </div>
         <div class="plan-feature"><span class="icon">✅</span> <strong>Tudo do gratuito +</strong></div>
         <div class="plan-feature"><span class="icon">🖼️</span> Ditado Ilustrado com emoji automático</div>
-        <div class="plan-feature"><span class="icon">📝</span> Gerador de Provas com gabarito</div>
         <div class="plan-feature"><span class="icon">🏅</span> Certificados personalizados</div>
         <div class="plan-feature"><span class="icon">👩‍🎓</span> Fichas por aluno ilimitadas</div>
         <div class="plan-feature"><span class="icon">📅</span> Sequências semanais avançadas</div>
@@ -1526,11 +1514,6 @@ body {
         <div class="nav-icon">🖼️</div>
         <span class="nav-label">Ditado Ilustrado</span>
         <span class="nav-lock" id="lock-ditado">🔒</span>
-      </div>
-      <div class="nav-item" onclick="showPagePremium('provas','basico')">
-        <div class="nav-icon">📝</div>
-        <span class="nav-label">Gerador de Provas</span>
-        <span class="nav-lock" id="lock-provas">🔒</span>
       </div>
       <div class="nav-item" onclick="showPagePremium('certificados','basico')">
         <div class="nav-icon">🏅</div>
@@ -3900,7 +3883,7 @@ function hasPlan(required) {
 }
 
 function updateLocks() {
-  ['ditado','provas','certificados'].forEach(id => { const el=document.getElementById('lock-'+id); if(el) el.style.display=hasPlan('basico')?'none':'inline'; });
+  ['ditado','certificados'].forEach(id => { const el=document.getElementById('lock-'+id); if(el) el.style.display=hasPlan('basico')?'none':'inline'; });
   ['layout','qrcode','relatorio','cartazes','avaliacao'].forEach(id => { const el=document.getElementById('lock-'+id); if(el) el.style.display=hasPlan('premium')?'none':'inline'; });
 }
 
@@ -4108,7 +4091,7 @@ function addHistorico(tipo, desc) {
   if(document.getElementById('rel-fichas')) renderRelatorio();
 }
 
-const hiconMap = {'PDF Sílabas':'✂️','Caça-Palavras':'🔍','Flashcards':'🃏','Ficha':'📋','Ditado':'🖼️','Prova':'📝','Certificado':'🏅','Semana':'📅','QR Code':'📱','Rimas':'🎯'};
+const hiconMap = {'PDF Sílabas':'✂️','Caça-Palavras':'🔍','Flashcards':'🃏','Ficha':'📋','Ditado':'🖼️','Certificado':'🏅','Semana':'📅','QR Code':'📱','Rimas':'🎯'};
 
 function renderHistorico() {
   const el = document.getElementById('historico-list');
@@ -4276,85 +4259,6 @@ function gerarPDFDitado() {
   addHistorico('Ditado',`${words.length} palavra(s) com emoji`);
 }
 
-// ════════════════════════════════════════════════════════════════════
-// GERADOR DE PROVAS (Pacote Professor)
-// ════════════════════════════════════════════════════════════════════
-let provaWords = [];
-function addProvaWord(){const inp=document.getElementById('input-prova');const p=inp.value.trim().toUpperCase();if(!p||provaWords.includes(p)){inp.value='';return;}provaWords.push(p);inp.value='';renderProvaChips();}
-function renderProvaChips(){document.getElementById('prova-chips').innerHTML=provaWords.map((w,i)=>`<div class="cw-word-chip" style="display:inline-flex;align-items:center;gap:5px">${w}<span onclick="provaWords.splice(${i},1);renderProvaChips()" style="cursor:pointer;color:#c0b8b0;font-weight:700">×</span></div>`).join('');}
-function gerarPreviewProva(){
-  const words=provaWords.length>0?provaWords:wordBank;
-  if(words.length===0){alert('Adicione palavras!');return;}
-  const tipo=document.getElementById('prova-tipo').value;
-  const el=document.getElementById('prova-preview');
-  el.innerHTML=`<div class="panel-title" style="margin-top:16px">Pré-visualização</div>`+
-    words.slice(0,6).map((p,i)=>{
-      const s=silabas(p);
-      if(tipo==='multipla'){
-        // Generate 4 options: correct + 3 wrong
-        const correct=s.join('');
-        const wrongs=words.filter(w=>w!==p).slice(0,3).map(w=>silabas(w).join(''));
-        const options=[correct,...wrongs].sort(()=>Math.random()-0.5);
-        return `<div class="prova-question">
-          <div class="prova-q-num">Questão ${i+1}</div>
-          <div class="prova-q-text">Como se separam as sílabas de "<strong>${p}</strong>"?</div>
-          <div class="prova-options">${options.map(o=>`<div class="prova-option" onclick="marcarOpcao(this,'${correct}')">${s.map((sil,si)=>`<span class="syllable-pill ${SYL_COLORS[si%6]}" style="font-size:12px;padding:3px 8px">${sil}</span>`).join(' ')}</div>`).join('')}</div>
-        </div>`;
-      } else {
-        const hideIdx=Math.floor(Math.random()*s.length);
-        return `<div class="prova-question">
-          <div class="prova-q-num">Questão ${i+1}</div>
-          <div class="prova-q-text">Complete: ${s.map((sil,si)=>si===hideIdx?`<span style="display:inline-block;width:40px;border-bottom:2px solid #2d2a26;margin:0 4px">&nbsp;</span>`:
-            `<span class="syllable-pill ${SYL_COLORS[si%6]}" style="font-size:13px;padding:4px 10px">${sil}</span>`).join('')}</div>
-        </div>`;
-      }
-    }).join('');
-}
-function marcarOpcao(el,correct){
-  const isCorrect=el.textContent.replace(/\s/g,'')===correct.replace(/\s/g,'');
-  el.classList.add(isCorrect?'correct':'wrong');
-}
-function gerarPDFProva(){
-  if(!hasPlan('basico')){openModal();return;}
-  const words=provaWords.length>0?provaWords:wordBank;
-  if(words.length===0){alert('Adicione palavras!');return;}
-  const{jsPDF}=window.jspdf;
-  const doc=new jsPDF({unit:'mm',format:'a4',orientation:'portrait'});
-  const PW=210,PH=297,ML=18,MR=18,MT=22;
-  doc.setFillColor(232,242,236);doc.rect(0,0,PW,20,'F');
-  doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(80,130,100);
-  doc.text('🌱 AlfaKit · Avaliação',PW/2,12,{align:'center'});
-  let y=28;
-  doc.setFont('helvetica','bold');doc.setFontSize(16);doc.setTextColor(45,42,38);
-  doc.text(document.getElementById('prova-titulo').value||'Avaliação de Sílabas',PW/2,y,{align:'center'});y+=8;
-  const aluno=document.getElementById('prova-aluno').value;
-  if(aluno){doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(100,90,80);doc.text('Aluno(a): '+aluno,ML,y);y+=6;}
-  doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(140,130,120);
-  doc.text('Data: '+new Date().toLocaleDateString('pt-BR'),PW-MR,y,{align:'right'});y+=8;
-  doc.setDrawColor(168,203,181);doc.setLineWidth(0.8);doc.line(ML,y,PW-MR,y);y+=8;
-  words.forEach((p,i)=>{
-    if(y>PH-40)return;
-    const s=silabas(p);
-    doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(60,50,40);
-    doc.text(`${i+1}. Separe as sílabas de: ${p}`,ML,y);y+=6;
-    doc.setDrawColor(200,195,190);doc.setLineWidth(0.4);doc.line(ML+6,y+3,PW-MR,y+3);y+=10;
-  });
-  // Gabarito
-  doc.addPage();y=22;
-  doc.setFillColor(254,244,227);doc.rect(0,0,PW,18,'F');
-  doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(158,101,18);
-  doc.text('GABARITO',PW/2,11,{align:'center'});y=26;
-  words.forEach((p,i)=>{
-    if(y>PH-20)return;
-    const s=silabas(p);
-    doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(60,50,40);
-    doc.text(`${i+1}. ${p}`,ML,y);
-    doc.setFont('helvetica','normal');doc.setTextColor(80,130,100);
-    doc.text('→ '+s.join(' · '),ML+40,y);y+=8;
-  });
-  doc.save('prova_silabas.pdf');
-  addHistorico('Prova',`${words.length} questão(ões) · com gabarito`);
-}
 
 // ════════════════════════════════════════════════════════════════════
 // CERTIFICADOS (Pacote Professor)
@@ -4491,7 +4395,7 @@ function gerarQR(tipo){
 function renderRelatorio(){
   const ra=document.getElementById('rel-alunos');if(ra)ra.textContent=alunos.length;
   const rp=document.getElementById('rel-palavras');if(rp)rp.textContent=wordBank.length;
-  const rf=document.getElementById('rel-fichas');if(rf)rf.textContent=historico.filter(h=>h.tipo==='Ficha'||h.tipo==='Ditado'||h.tipo==='Prova'||h.tipo==='Certificado').length;
+  const rf=document.getElementById('rel-fichas');if(rf)rf.textContent=historico.filter(h=>h.tipo==='Ficha'||h.tipo==='Ditado'||h.tipo==='Certificado').length;
   const rpdf=document.getElementById('rel-pdfs');if(rpdf)rpdf.textContent=historico.filter(h=>h.tipo.startsWith('PDF')||h.tipo==='Flashcards'||h.tipo==='Caça-Palavras').length;
   const list=document.getElementById('rel-alunos-list');
   if(!list)return;
