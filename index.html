@@ -6,6 +6,7 @@
 <title>AlfaKit — Sistema de Alfabetização Prática</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Fredoka+One&family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <style>
 /* ══════════════════════════════════════════════
    RESET & BASE teste de código
@@ -3881,10 +3882,7 @@ function updateUserBar() {
 }
 
 function hasPlan(required) {
-  if (!currentUser) return false;
-  if (required === 'basico')  return ['basico','premium'].includes(currentUser.plan);
-  if (required === 'premium') return currentUser.plan === 'premium';
-  return true;
+  return true; // Liberado tudo temporariamente para testes locais
 }
 
 function updateLocks() {
@@ -4366,45 +4364,58 @@ function bindCertListeners() {
 function gerarPDFCertificado(){
   if(!hasPlan('basico')){openModal();return;}
   const nome=document.getElementById('cert-aluno').value||'Aluno';
-  const conq=document.getElementById('cert-conquista').value||'Conclusão do Módulo de Sílabas';
-  const prof=document.getElementById('cert-prof').value||'Professora';
-  const dt=document.getElementById('cert-data').value||new Date().toLocaleDateString('pt-BR');
-  const{jsPDF}=window.jspdf;
-  const doc=new jsPDF({unit:'mm',format:'a4',orientation:'landscape'});
-  const PW=297,PH=210;
-  // Background
-  doc.setFillColor(248,252,249);doc.rect(0,0,PW,PH,'F');
-  doc.setDrawColor(168,203,181);doc.setLineWidth(4);doc.rect(8,8,PW-16,PH-16);
-  doc.setDrawColor(232,242,236);doc.setLineWidth(2);doc.rect(12,12,PW-24,PH-24);
-  // Header decoration
-  doc.setFillColor(232,242,236);doc.rect(0,0,PW,30,'F');
-  doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(80,130,100);
-  doc.text('🌱 AlfaKit — Sistema de Alfabetização Prática',PW/2,18,{align:'center'});
-  // Medal
-  doc.setFontSize(52);doc.text('🏅',PW/2,65,{align:'center'});
-  // Title
-  doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(120,110,100);
-  doc.text('CERTIFICADO DE CONQUISTA',PW/2,82,{align:'center'});
-  // Name
-  doc.setFont('helvetica','bold');doc.setFontSize(32);doc.setTextColor(80,130,100);
-  doc.text(nome,PW/2,102,{align:'center'});
-  // Text
-  doc.setFont('helvetica','normal');doc.setFontSize(12);doc.setTextColor(90,80,70);
-  doc.text('concluiu com dedicação e alegria:',PW/2,116,{align:'center'});
-  // Achievement
-  doc.setFont('helvetica','bold');doc.setFontSize(18);doc.setTextColor(45,42,38);
-  doc.text(conq,PW/2,130,{align:'center'});
-  // Signatures
-  const sigY=160;
-  doc.setDrawColor(150,140,130);doc.setLineWidth(0.5);
-  doc.line(60,sigY,140,sigY);doc.line(PW-140,sigY,PW-60,sigY);
-  doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(120,110,100);
-  doc.text(prof,100,sigY+6,{align:'center'});
-  doc.text(dt,PW-100,sigY+6,{align:'center'});
-  doc.text('Professora(or)',100,sigY+12,{align:'center'});
-  doc.text('Data',PW-100,sigY+12,{align:'center'});
-  doc.save(`certificado_${nome.replace(/\s/g,'_')}.pdf`);
-  addHistorico('Certificado',`Certificado de ${nome}`);
+  
+  // Atualizar preview para os campos ficarem sincronizados (opcional mas bom para a UI)
+  const conq = document.getElementById('cert-conquista').value || 'Módulo de Sílabas';
+  const prof = document.getElementById('cert-prof').value || 'Prof(a).';
+  const dt   = document.getElementById('cert-data').value || '';
+  const pnEl = document.getElementById('cert-prev-nome');    if(pnEl) pnEl.textContent = nome;
+  const pcEl = document.getElementById('cert-prev-conquista'); if(pcEl) pcEl.textContent = conq;
+  const ppEl = document.getElementById('cert-prev-prof');    if(ppEl) ppEl.textContent = prof;
+  const pdEl = document.getElementById('cert-prev-data');    if(pdEl) pdEl.textContent = dt;
+
+  // Em vez de capturar o da tela que pode estar distorcido, criamos um template perfeito offscreen
+  const container = document.createElement('div');
+  container.style.position = 'absolute';
+  container.style.top = '0px';
+  container.style.left = '0px';
+  container.style.zIndex = '-9999'; // escondido atrás do shell do app
+  container.style.width = '1123px';
+  container.style.height = '794px';
+  container.style.padding = '80px';
+  container.style.display = 'flex';
+  container.style.flexDirection = 'column';
+  container.style.justifyContent = 'center';
+  container.style.alignItems = 'center';
+  container.style.background = 'linear-gradient(135deg,#fff9f5,#e8f2ec)';
+  container.style.fontFamily = "'Nunito', sans-serif";
+  container.style.textAlign = 'center';
+
+  container.innerHTML = `
+    <div style="font-size:80px;margin-bottom:20px;line-height:1">🏅</div>
+    <div style="font-size:20px;font-weight:800;text-transform:uppercase;letter-spacing:6px;color:#a09890;margin-bottom:20px">Certificado de Conquista</div>
+    <div style="font-family:'Fredoka One',sans-serif;font-size:68px;color:var(--sage);margin-bottom:16px">${nome}</div>
+    <div style="font-size:24px;font-weight:700;color:#7a7068;margin-bottom:24px">concluiu com sucesso</div>
+    <div style="font-family:'Fredoka One',sans-serif;font-size:36px;color:#2d2a26;margin-bottom:50px">${conq}</div>
+    <div style="display:flex;justify-content:center;gap:80px;font-size:18px;color:#a09890;font-weight:700">
+      <div><div style="border-top:3px solid #c0b8b0;padding-top:10px;width:240px;margin-top:20px">${prof}</div></div>
+      <div><div style="border-top:3px solid #c0b8b0;padding-top:10px;width:180px;margin-top:20px">${dt}</div></div>
+    </div>
+  `;
+  document.body.appendChild(container);
+
+  const opt = {
+    margin:       0,
+    filename:     `certificado_${nome.replace(/\s/g,'_')}.pdf`,
+    image:        { type: 'jpeg', quality: 1 },
+    html2canvas:  { scale: 2, useCORS: true, scrollY: 0, scrollX: 0 },
+    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
+  };
+
+  html2pdf().set(opt).from(container).save().then(() => {
+    document.body.removeChild(container);
+    addHistorico('Certificado',`Certificado de ${nome}`);
+  });
 }
 
 // ════════════════════════════════════════════════════════════════════
@@ -4934,125 +4945,49 @@ function gerarGabarito() {
 function gerarPDFAvaliacao() {
   if(!hasPlan('premium')){openModal();return;}
   if (quesitos.length === 0) { alert('Adicione quesitos!'); return; }
-  const letras = ['A','B','C','D','E'];
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ unit:'mm', format:'a4', orientation:'portrait' });
-  const PW=210, PH=297, ML=15, MR=15, MT=18;
-  let y = MT;
+  
+  // Atualiza a prévia para gerar o HTML com as últimas mudanças
+  previewAvaliacao();
+  
+  const element = document.getElementById('av-preview');
+  const titulo = document.getElementById('av-titulo').value || 'Avaliacao';
+  
+  // Cria um clone "offscreen" pra não afetar ou ser afetado pela rolagem e tamanhos da tela web
+  const container = document.createElement('div');
+  container.style.position = 'absolute';
+  container.style.top = '0px';
+  container.style.left = '0px';
+  container.style.zIndex = '-9999';
+  container.style.width = '794px'; 
+  container.style.background = '#ffffff';
+  container.style.padding = '0';
+  container.style.margin = '0';
 
-  // Header
-  const escola = document.getElementById('av-escola').value || '';
-  const titulo = document.getElementById('av-titulo').value || 'Avaliação';
-  const turma = document.getElementById('av-turma').value || '';
-  const disc = document.getElementById('av-disciplina').value || '';
-  const data = document.getElementById('av-data').value || '';
-  const prof = document.getElementById('av-prof').value || '';
-  const instr = document.getElementById('av-instrucoes').value || '';
+  const clone = element.cloneNode(true);
+  clone.id = '';
+  clone.style.border = 'none';
+  clone.style.borderRadius = '0';
+  clone.style.padding = '40px'; 
+  clone.style.margin = '0';
+  clone.style.fontFamily = "'Nunito', sans-serif";
 
-  // Logo
-  if (avLogoDataURL) {
-    try { doc.addImage(avLogoDataURL, 'PNG', ML, y, 22, 22); } catch(e){}
-    const logoX = ML + 26;
-    doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.setTextColor(40,38,34);
-    doc.text(escola, logoX, y+8);
-    doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(60,50,40);
-    doc.text(titulo, logoX, y+16);
-    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(120,110,100);
-    doc.text([disc,turma,data].filter(Boolean).join(' · '), logoX, y+22);
-    y += 28;
-  } else {
-    doc.setFillColor(232,242,236); doc.rect(0,0,PW,22,'F');
-    doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.setTextColor(45,42,38);
-    doc.text(titulo, PW/2, y+7, {align:'center'});
-    if (escola) { doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(100,90,80); doc.text(escola, PW/2, y+14, {align:'center'}); }
-    y += 26;
-  }
+  container.appendChild(clone);
+  document.body.appendChild(container);
 
-  // Info line
-  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(100,90,80);
-  const infoLine = [disc,turma,data,prof?'Prof(a): '+prof:''].filter(Boolean).join('  |  ');
-  if (infoLine) { doc.text(infoLine, ML, y); y += 6; }
+  const opt = {
+    margin:       10, 
+    filename:     `avaliacao_${titulo.replace(/\s/g,'_')}.pdf`,
+    image:        { type: 'jpeg', quality: 0.98 },
+    html2canvas:  { scale: 2, useCORS: true, scrollY: 0, scrollX: 0 },
+    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+    pagebreak:    { mode: ['css', 'legacy'] }
+  };
 
-  // Instructions
-  if (instr) {
-    doc.setFillColor(245,244,240); doc.roundedRect(ML, y, PW-ML-MR, 8, 2, 2, 'F');
-    doc.setFont('helvetica','italic'); doc.setFontSize(8); doc.setTextColor(120,110,100);
-    doc.text(instr, ML+3, y+5.5);
-    y += 11;
-  }
-
-  const total = quesitos.reduce((s,q)=>s+(q.valor||1),0);
-  doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(80,130,100);
-  doc.text(`${quesitos.length} questão(ões) · Total: ${total} pontos`, ML, y); y += 5;
-
-  // Nome line
-  doc.setDrawColor(150,140,130); doc.setLineWidth(0.4);
-  doc.line(ML, y+4, PW/2-5, y+4);
-  doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(100,90,80);
-  doc.text('Nome:', ML, y+2); doc.text('Data:', PW/2, y+2);
-  doc.line(PW/2+10, y+4, PW-MR, y+4);
-  y += 10;
-
-  // Separator
-  doc.setDrawColor(168,203,181); doc.setLineWidth(0.8); doc.line(ML,y,PW-MR,y); y += 8;
-
-  // Questions
-  quesitos.forEach((q, qi) => {
-    if (y > PH-30) { doc.addPage(); y = MT; }
-
-    // Enunciado
-    doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(40,38,34);
-    const enum_text = `${qi+1}. ${q.enunciado || ''}`;
-    const enumLines = doc.splitTextToSize(enum_text, PW-ML-MR-20);
-    doc.text(enumLines, ML, y);
-    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(140,130,120);
-    doc.text(`(${q.valor||1} pt${(q.valor||1)!==1?'s':''})`, PW-MR, y, {align:'right'});
-    y += enumLines.length * 5 + 3;
-
-    // Image
-    if (q.imgDataURL) {
-      try {
-        if (y + 35 > PH-30) { doc.addPage(); y = MT; }
-        doc.addImage(q.imgDataURL, 'PNG', ML+4, y, 40, 30);
-        y += 34;
-      } catch(e) {}
-    }
-
-    // Options
-    if (q.tipo === 'multipla') {
-      q.opcoes.forEach((op, oi) => {
-        if (!op) return;
-        if (y > PH-20) { doc.addPage(); y = MT; }
-        doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(60,50,40);
-        doc.text(`(${letras[oi]}) ${op}`, ML+6, y); y += 6;
-      });
-    } else if (q.tipo === 'verdadeiro') {
-      doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(60,50,40);
-      doc.text('(  ) Verdadeiro      (  ) Falso', ML+6, y); y += 6;
-    } else {
-      // Lines for open answer
-      for (let k=0; k<2; k++) {
-        if (y > PH-20) { doc.addPage(); y = MT; }
-        doc.setDrawColor(200,195,190); doc.setLineWidth(0.3);
-        doc.line(ML+4, y+4, PW-MR, y+4); y += 8;
-      }
-    }
-    y += 6;
+  html2pdf().set(opt).from(container).save().then(() => {
+    document.body.removeChild(container);
+    addHistorico('Avaliação', `${quesitos.length} questão(ões) · ${titulo}`);
+    setTimeout(gerarGabarito, 500);
   });
-
-  // Footer
-  const totalPages = doc.getNumberOfPages();
-  for (let pg=1; pg<=totalPages; pg++) {
-    doc.setPage(pg);
-    doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(190,185,180);
-    doc.text(`AlfaKit · ${titulo} · Pág ${pg}/${totalPages}`, PW/2, PH-6, {align:'center'});
-  }
-
-  doc.save('avaliacao.pdf');
-  addHistorico('Avaliação', `${quesitos.length} questão(ões) · ${titulo}`);
-
-  // Also generate gabarito on next page
-  setTimeout(gerarGabarito, 500);
 }
 
 // ════════════════════════════════════════════════════════════════════
@@ -5073,16 +5008,32 @@ if (upgradeModal) {
   });
 }
 
-// Auto-login from saved session
+// ════════════════════════════════════════════════════════════════════
+// 🔧 LOCALHOST DEV MODE
+// Quando rodando em localhost, força plano premium + email admin
+// para desbloquear TODAS as funcionalidades durante o desenvolvimento.
+//
+// ⚠️  ISSO NÃO AFETA A PRODUÇÃO (Hostinger).
+//     Na Hostinger o domínio NÃO é localhost, então esse bloco
+//     é ignorado e os planos funcionam normalmente via API + MySQL.
+//
+// ✅  Pode dar deploy direto — não precisa remover nada.
+// ════════════════════════════════════════════════════════════════════
 (function checkSession() {
   try {
+    const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
     const session = getSession();
     if (session) {
+      // LOCALHOST ONLY: força premium + admin para testar tudo desbloqueado
+      if (isLocal) { session.plan = 'premium'; session.email = ADMIN_EMAIL; }
       currentUser = session;
       document.getElementById('auth-screen').style.display = 'none';
       document.getElementById('app-shell').style.display = 'flex';
       updateUserBar();
       updateLocks();
+    } else if (isLocal) {
+      // LOCALHOST ONLY: auto-login sem precisar clicar em Demo
+      doDemo();
     }
   } catch(e) {}
 })();

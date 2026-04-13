@@ -60,6 +60,58 @@ $action = $body['action'] ?? ($_GET['action'] ?? '');
 
 switch ($action) {
 
+    case 'webhook':
+        // =======================================================
+        // WEBHOOK DE PAGAMENTO PAGO (Ex: Kiwify, Hotmart, Eduzz)
+        // Configure a URL na sua plataforma como: 
+        // https://seusite.com.br/api.php?action=webhook
+        // =======================================================
+        
+        // 1. (Recomendado) Validação de Token de Segurança
+        // $tokenSecreto = '12345';
+        // Se a plataforma permitir que você envie um parâmetro extra na URL de webhook:
+        // if (($_GET['token'] ?? '') !== $tokenSecreto) resp(['ok'=>false, 'msg'=>'Acesso negado.'], 403);
+        
+        // 2. Extrai o status da requisição
+        $status = strtolower($body['status'] ?? $body['event'] ?? $body['situacao'] ?? '');
+        
+        // Em plataformas como Kiwify é 'approved', Hotmart é 'APPROVED', etc.
+        $statusAprovados = ['paid', 'approved', 'aprovado', 'pago', 'completed', 'order_approved'];
+        $ehAprovado = false;
+        foreach ($statusAprovados as $s) {
+            if (strpos($status, $s) !== false) $ehAprovado = true;
+        }
+        if (!$ehAprovado && $status !== '') {
+            // Ignoramos reembolsos, carrinhos abandonados, etc
+            resp(['ok'=>true, 'msg'=>"Ignorado. Status de compra nao pago: $status"]);
+        }
+
+        // 3. Pega o e-mail e nome (tentando os formatos mais comuns de mercado)
+        $email = $body['email'] ?? $body['Customer']['email'] ?? $body['buyer']['email'] ?? $body['data']['buyer']['email'] ?? '';
+        $nome  = $body['name'] ?? $body['nome'] ?? $body['Customer']['full_name'] ?? $body['buyer']['name'] ?? $body['data']['buyer']['name'] ?? 'Novo Aluno VIP';
+        
+        $email = strtolower(trim($email));
+
+        if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            // Log para debug em caso de nova plataforma com outro formato
+            error_log("Webhook alfakit - formato nao reconhecido: " . json_encode($body)); 
+            resp(['ok'=>false, 'msg'=>'E-mail nao encontrado no payload.'], 400);
+        }
+
+        // 4. Cria ou Libera o Acesso no Banco de Dados com a Senha Padrão
+        $ex = getDB()->prepare('SELECT id FROM usuarios WHERE email=?');
+        $ex->execute([$email]);
+        
+        if (!$ex->fetch()) {
+            getDB()->prepare('INSERT INTO usuarios (nome,email,tipo,plan,senha,criado_por_admin,criado_em) VALUES(?,?,?,?,?,0,NOW())')
+                   ->execute([$nome, $email, 'professora', 'premium', DEFAULT_PASSWORD]);
+            resp(['ok'=>true, 'msg'=>"Sucesso! Nova conta criada para: $email"]);
+        } else {
+            // Opcional: Se a pessoa já teve conta antes, liberamos o Premium novamente
+            getDB()->prepare('UPDATE usuarios SET plan=?, bloqueado=0 WHERE email=?')->execute(['premium', $email]);
+            resp(['ok'=>true, 'msg'=>"Sucesso! Conta ja existia. Plano atualizado para premium: $email"]);
+        }
+
     case 'login':
         $email = strtolower(trim($body['email'] ?? ''));
         $senha = trim($body['senha'] ?? '');
