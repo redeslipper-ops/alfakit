@@ -69,6 +69,10 @@ switch ($action) {
         
         // 1. (Recomendado) Validação de Token de Segurança
         // $tokenSecreto = '12345';
+        
+        // LOG DE DEBUG: Grava tudo que chega no webhook para você ver no arquivo webhook_log.txt
+        file_put_contents('webhook_log.txt', "[" . date('Y-m-d H:i:s') . "] " . json_encode($body, JSON_UNESCAPED_UNICODE) . PHP_EOL, FILE_APPEND);
+        
         // Se a plataforma permitir que você envie um parâmetro extra na URL de webhook:
         // if (($_GET['token'] ?? '') !== $tokenSecreto) resp(['ok'=>false, 'msg'=>'Acesso negado.'], 403);
         
